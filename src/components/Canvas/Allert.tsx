@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LineCoordinates } from "./Canvas";
+import { LineCoordinates } from "./CanvasHook";
 
 interface Props {
     lines: LineCoordinates[]
