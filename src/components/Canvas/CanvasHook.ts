@@ -47,61 +47,30 @@ const CanvasHook = () => {
 
     };
 
-    const doLinesIntersect = (line1: LineCoordinates, line2: LineCoordinates): boolean => {
-        const { start: p1, end: p2 } = line1;
-        const { start: p3, end: p4 } = line2;
-
-        const orientation = (p: Coordinate, q: Coordinate, r: Coordinate) => {
-            const val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
-            return val === 0 ? 0 : (val > 0 ? 1 : 2);
+    const checkIfLineCrossDot = (line: LineCoordinates) => {
+        const { start, end } = line;
+    
+        // Function to check if a point is inside a smaller bounding box of the dot
+        const isPointNearDot = (point: Coordinate, dot: any) => {
+            const padding = 5; // Reduce this value to make detection more precise
+            return (
+                point.x >= dot.x - padding && point.x <= dot.x + dot.width + padding &&
+                point.y >= dot.y - padding && point.y <= dot.y + dot.height + padding
+            );
         };
-
-        const onSegment = (p: Coordinate, q: Coordinate, r: Coordinate) => {
-            return (q.x <= Math.max(p.x, r.x) && q.x >= Math.min(p.x, r.x) &&
-                q.y <= Math.max(p.y, r.y) && q.y >= Math.min(p.y, r.y));
+    
+        // Check multiple points along the line to reduce noise
+        const steps = 30; // Number of steps to check along the line
+        for (let i = 0; i <= steps; i++) {
+            const x = start.x + (end.x - start.x) * (i / steps);
+            const y = start.y + (end.y - start.y) * (i / steps);
+    console.log('here i: ', i, x, y)
+            dotsPositions.forEach((dot) => {
+                if (isPointNearDot({ x, y }, dot)) {
+                    dot.isCrossed = true;
+                }
+            });
         };
-
-        const o1 = orientation(p1, p2, p3);
-        const o2 = orientation(p1, p2, p4);
-        const o3 = orientation(p3, p4, p1);
-        const o4 = orientation(p3, p4, p2);
-
-        if (o1 !== o2 && o3 !== o4) {
-            return true;
-        }
-
-        if (o1 === 0 && onSegment(p1, p3, p2)) return true;
-        if (o2 === 0 && onSegment(p1, p4, p2)) return true;
-        if (o3 === 0 && onSegment(p3, p1, p4)) return true;
-        if (o4 === 0 && onSegment(p3, p2, p4)) return true;
-
-        return false;
-    };
-
-
-    const checkIfLineCrossDot = (line: LineCoordinates, shouldCheckIflineCrossDot?: boolean) => {
-
-
-        dotsPositions.forEach(dot => {
-            const dotRect = {
-                start: { x: dot.x, y: dot.y },
-                end: { x: dot.x + dot.width, y: dot.y + dot.height }
-            };
-
-
-            const rectangleLines: LineCoordinates[] = [
-                { start: dotRect.start, end: { x: dotRect.end.x, y: dotRect.start.y } },
-                { start: { x: dotRect.end.x, y: dotRect.start.y }, end: dotRect.end },
-                { start: dotRect.end, end: { x: dotRect.start.x, y: dotRect.end.y } },
-                { start: { x: dotRect.start.x, y: dotRect.end.y }, end: dotRect.start }
-            ];
-
-            if (shouldCheckIflineCrossDot) {
-                const isCrossing = rectangleLines.some(rectLine => doLinesIntersect(line, rectLine));
-                if (isCrossing) dot.isCrossed = true;
-            };
-
-        });
     };
 
     const drawLine = (ctx: CanvasRenderingContext2D, line: LineCoordinates) => {
@@ -119,7 +88,7 @@ const CanvasHook = () => {
     const redrawLines = (ctx: CanvasRenderingContext2D, shouldCheckIflineCrossDot?: boolean) => {
         ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
         drawDots(ctx);
-        lines.forEach(line => { drawLine(ctx, line); checkIfLineCrossDot(line, shouldCheckIflineCrossDot) });
+        lines.forEach(line => { drawLine(ctx, line); if (shouldCheckIflineCrossDot) checkIfLineCrossDot(line) });
     };
     useEffect(() => {
         const dotsThatAreCrossed = dotsPositions.filter(dot => dot.isCrossed)
@@ -192,6 +161,7 @@ const CanvasHook = () => {
 
 
                 const handleMouseUp = () => {
+                    console.log(lines)
                     setIsPainting(false);
                     redrawLines(ctx, true);
                     setStartMousePosition(undefined);
